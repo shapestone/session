@@ -6,7 +6,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.xlenc.session</groupId>
-    <artifactId>session-api</artifactId>
+    <artifactId>session-service</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
@@ -25,6 +25,12 @@
     </properties>
 
     <dependencies>
+
+        <dependency>
+            <groupId>com.xlenc.session</groupId>
+            <artifactId>session-api</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
 
         <!-- Mongo DB -->
         <dependency>

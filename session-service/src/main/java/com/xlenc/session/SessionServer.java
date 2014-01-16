@@ -34,9 +34,14 @@ public class SessionServer  extends Service<SessionConfiguration> {
     }
 
     private void wireHealthChecks(Environment environment, Mongo mongo) {
+        environment.addHealthCheck(new MongoHealthCheck(mongo));
     }
 
     private void wireSessionService(Environment environment, Mongo mongo, Morphia morphia, String databaseName) {
+        final SessionPersistence sessionPersistence = new SessionPersistenceImpl(mongo, morphia, databaseName);
+        final SessionService sessionService = new SessionServiceImpl(sessionPersistence);
+        final SessionResource sessionResource = new SessionResource(sessionService);
+        environment.addResource(sessionResource);
     }
 
 }
