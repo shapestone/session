@@ -23,14 +23,15 @@ public class SessionPersistenceImpl extends BasicDAO<SessionData, ObjectId> impl
         super(mongo, morphia, dbName);
     }
 
-    public SessionData addSession(SessionData sessionData) {
+    public Result<SessionData, SessionError> addSession(SessionData sessionData) {
         sessionData.setId(new ObjectId().toString());
         super.save(sessionData);
-        return sessionData;
+        return null;
     }
 
-    public SessionData findSession(final String id) {
-        return super.findOne(Mapper.ID_KEY, id);
+    public Result<SessionData, SessionError> findSession(final String id) {
+//        return super.findOne(Mapper.ID_KEY, id);
+        return null;
     }
 
     public int updateSession(String id, long version, final SessionData sessionData) {

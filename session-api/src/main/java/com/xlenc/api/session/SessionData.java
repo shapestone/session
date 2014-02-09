@@ -19,16 +19,23 @@ public @Data class SessionData {
 
     @Id
     private String id;
+    @Property("party_id")
+    private String partyId;
+    @Property("application_id")
+    private String applicationId;
     @Property("created")
-    private long created;
+    private Long created;
     @Property("last_request")
-    private long lastRequest;
+    private Long lastRequest;
     @Property("ended")
-    private long ended;
+    private Long ended;
     @Property("data")
     private Map<String, Object> data;
     @Version
-    private long version;
+    private Long version;
+
+    public SessionData(String id, Map<String, Object> data) {
+    }
 
     public SessionData(String id) {
         this.id = id;

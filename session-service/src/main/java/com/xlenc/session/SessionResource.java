@@ -6,12 +6,14 @@ import com.yammer.metrics.annotation.Timed;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Response;
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * User: Michael Williams
  * Date: 1/16/14
  * Time: 8:00 AM
  */
+@Path("/sessions")
 public class SessionResource {
 
     private SessionService sessionService;
@@ -24,8 +26,7 @@ public class SessionResource {
     @Timed
     //@ApiOperation(value = "Creates a question", response = QuestionData.class)
     public Response addSession(SessionData sessionData) {
-        sessionService.addSession(sessionData);
-        final SessionData newSessionData = sessionService.addSession(sessionData);
+        final Result<SessionData, SessionError> newSessionData = sessionService.addSession(sessionData);
         return Response.ok(newSessionData).build();
     }
 
@@ -33,7 +34,7 @@ public class SessionResource {
     @Timed
     //@ApiOperation("Retrieves a list of questions")
     public Response readSession(@PathParam("id") String id) {
-        final SessionData questionData = sessionService.readSession(id);
+        final Result<SessionData, SessionError> questionData = sessionService.readSession(id);
         return Response.ok(questionData).build();
     }
 
@@ -51,4 +52,12 @@ public class SessionResource {
         ).build();
     }
 
+    @PUT
+    @Timed
+    @Path("/{id}")
+    //@ApiOperation("Delete a question")
+    public Response updateSession(@PathParam("id") String id, Map<String, Object> data) {
+        final Result<SessionData, SessionError> result = sessionService.updateSession(new SessionData(id, data));
+        return Response.ok(result).build();
+    }
 }

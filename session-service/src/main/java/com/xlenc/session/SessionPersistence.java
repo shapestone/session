@@ -8,9 +8,11 @@ import com.xlenc.api.session.SessionData;
  * Time: 7:58 AM
  */
 public interface SessionPersistence {
-    SessionData addSession(SessionData sessionData);
+    Result<SessionData, SessionError> addSession(SessionData sessionData);
 
-    SessionData findSession(String id);
+    Result<SessionData, SessionError> findSession(String id);
 
     int deleteSession(String id);
+
+    Result<SessionData,SessionError> updateSession(SessionData sessionData);
 }
