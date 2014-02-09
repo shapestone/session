@@ -44,4 +44,8 @@ public class SessionServer  extends Service<SessionConfiguration> {
         environment.addResource(sessionResource);
     }
 
+    public static void main(String[] args) throws Exception {
+        new SessionServer().run(args);
+    }
+
 }

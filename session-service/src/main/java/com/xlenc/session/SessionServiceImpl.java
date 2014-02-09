@@ -15,16 +15,21 @@ public class SessionServiceImpl implements SessionService {
         this.sessionPersistence = sessionPersistence;
     }
 
-    public SessionData addSession(SessionData sessionData) {
+    public Result<SessionData, SessionError> addSession(SessionData sessionData) {
         return sessionPersistence.addSession(sessionData);
     }
 
-    public SessionData readSession(String id) {
+    public Result<SessionData, SessionError> readSession(String id) {
         return sessionPersistence.findSession(id);
     }
 
     public int deleteSession(String id) {
         return sessionPersistence.deleteSession(id);
+    }
+
+    @Override
+    public Result<SessionData, SessionError> updateSession(SessionData sessionData) {
+        return sessionPersistence.updateSession(sessionData);
     }
 
 }
