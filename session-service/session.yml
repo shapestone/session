@@ -1,7 +1,11 @@
-mongoDatabase:
+cassandraDatabase:
   host: localhost
-  port: 27017
-  databaseName: session-db
+  keySpaceName: sessiondb
+  tableName: sessions
+
+crypto:
+  publicKeyFileName: /Users/michael/IdeaProjects/session/session-service/src/main/resources/sessionkey.pub
+  privateKeyFileName: /Users/michael/IdeaProjects/session/session-service/src/main/resources/sessionkey.pem
 
 http:
   port: 9020

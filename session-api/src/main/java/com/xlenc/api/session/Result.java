@@ -1,4 +1,4 @@
-package com.xlenc.session;
+package com.xlenc.api.session;
 
 import lombok.Data;
 import lombok.Getter;

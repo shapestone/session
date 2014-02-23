@@ -8,6 +8,8 @@ import com.google.code.morphia.query.Query;
 import com.google.code.morphia.query.UpdateResults;
 import com.mongodb.Mongo;
 import com.mongodb.WriteResult;
+import com.xlenc.api.session.Result;
+import com.xlenc.api.session.ResultError;
 import com.xlenc.api.session.SessionData;
 import org.bson.types.ObjectId;
 
@@ -23,13 +25,13 @@ public class SessionPersistenceImpl extends BasicDAO<SessionData, ObjectId> impl
         super(mongo, morphia, dbName);
     }
 
-    public Result<SessionData, SessionError> addSession(SessionData sessionData) {
+    public Result<SessionData, ResultError> saveSession(SessionData sessionData) {
         sessionData.setId(new ObjectId().toString());
         super.save(sessionData);
         return null;
     }
 
-    public Result<SessionData, SessionError> findSession(final String id) {
+    public Result<SessionData, ResultError> findSession(final String id) {
 //        return super.findOne(Mapper.ID_KEY, id);
         return null;
     }
@@ -46,6 +48,17 @@ public class SessionPersistenceImpl extends BasicDAO<SessionData, ObjectId> impl
         final UpdateResults<SessionData> update = updateFirst(query, updateOperations);
         return update.getUpdatedCount();
     }
+
+    @Override
+    public Result<SessionData, ResultError> updateSession(SessionData sessionData) {
+        return null;
+    }
+
+    @Override
+    public Result<SessionData, ResultError> endSession(SessionData sessionData) {
+        return null;
+    }
+
 
     public int deleteSession(String id) {
         final SessionData credential = new SessionData(id);

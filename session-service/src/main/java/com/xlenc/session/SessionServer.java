@@ -1,8 +1,5 @@
 package com.xlenc.session;
 
-import com.google.code.morphia.Morphia;
-import com.mongodb.Mongo;
-import com.mongodb.MongoClient;
 import com.yammer.dropwizard.Service;
 import com.yammer.dropwizard.config.Bootstrap;
 import com.yammer.dropwizard.config.Environment;
@@ -21,25 +18,28 @@ public class SessionServer  extends Service<SessionConfiguration> {
 
     @Override
     public void run(SessionConfiguration configuration, Environment environment) throws Exception {
-        final MongoDatabaseConfiguration mongoDatabaseConfiguration = configuration.getMongoDatabaseConfiguration();
-        final String host = mongoDatabaseConfiguration.getHost();
-        final int port = mongoDatabaseConfiguration.getPort();
-        final Mongo mongo = new MongoClient(host, port);
-        final Morphia morphia = new Morphia();
-        final String databaseName = mongoDatabaseConfiguration.getDatabaseName();
 
-        wireSessionService(environment, mongo, morphia, databaseName);
-        wireHealthChecks(environment, mongo);
+        final CassandraConfiguration cassandraConfiguration = configuration.getCassandraConfiguration();
+        final String node = cassandraConfiguration.getHost();
+        final String keySpaceName = cassandraConfiguration.getKeySpaceName();
+        final String tableName = cassandraConfiguration.getTableName();
+        final SessionPersistence sessionPersistence = new CassandraPersistence(node, keySpaceName, tableName);
 
+        final CryptoConfiguration cryptoConfiguration = configuration.getCryptoConfiguration();
+        final String publicKeyFileName = cryptoConfiguration.getPublicKeyFileName();
+        final String privateKeyFileName = cryptoConfiguration.getPrivateKeyFileName();
+        final SessionCryptoService sessionCryptoService = new SessionCryptoService(publicKeyFileName, privateKeyFileName);
+
+        wireSessionService(environment, sessionPersistence, sessionCryptoService);
+        wireHealthChecks(environment, sessionPersistence);
     }
 
-    private void wireHealthChecks(Environment environment, Mongo mongo) {
-        environment.addHealthCheck(new MongoHealthCheck(mongo));
+    private void wireHealthChecks(Environment environment, SessionPersistence sessionPersistence) {
+        environment.addHealthCheck(new CassandraHealthCheck(sessionPersistence));
     }
 
-    private void wireSessionService(Environment environment, Mongo mongo, Morphia morphia, String databaseName) {
-        final SessionPersistence sessionPersistence = new SessionPersistenceImpl(mongo, morphia, databaseName);
-        final SessionService sessionService = new SessionServiceImpl(sessionPersistence);
+    private void wireSessionService(Environment environment, SessionPersistence sessionPersistence, SessionCryptoService sessionCryptoService) {
+        final SessionService sessionService = new SessionServiceImpl(sessionPersistence, sessionCryptoService);
         final SessionResource sessionResource = new SessionResource(sessionService);
         environment.addResource(sessionResource);
     }

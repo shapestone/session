@@ -2,6 +2,8 @@ package com.xlenc.session;
 
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.utils.UUIDs;
+import com.xlenc.api.session.Result;
+import com.xlenc.api.session.ResultError;
 import com.xlenc.api.session.SessionData;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
@@ -23,10 +25,13 @@ public class CassandraPersistence implements SessionPersistence {
 
     private Logger log = LoggerFactory.getLogger(this.getClass());
     private Session session;
-    private String KEY_SPACE_NAME = "sessiondb";
+    private String keySpaceName;
+    private String tableName;
     private ObjectMapper mapper = new ObjectMapper();
 
-    public CassandraPersistence(String node) {
+    public CassandraPersistence(String node, String keySpaceName, String tableName) {
+        this.keySpaceName = keySpaceName;
+        this.tableName = tableName;
         final Cluster cluster = Cluster.builder().addContactPoint(node).build();
         session = cluster.connect();
         final Metadata metadata = cluster.getMetadata();
@@ -61,7 +66,8 @@ public class CassandraPersistence implements SessionPersistence {
     }
 
     private String getSessionTableCQL() {
-        return "CREATE TABLE sessiondb.sessions (" +
+        final String fullTableName = keySpaceName.trim().concat(".").concat(tableName.trim());
+        return "CREATE TABLE " + fullTableName + " (" +
                "id uuid PRIMARY KEY, " +
                "party_id text, " +
                "application_id text, " +
@@ -73,12 +79,12 @@ public class CassandraPersistence implements SessionPersistence {
     }
 
     private boolean keyspaceExists(Metadata metadata) {
-        final KeyspaceMetadata keyspace = metadata.getKeyspace(KEY_SPACE_NAME);
+        final KeyspaceMetadata keyspace = metadata.getKeyspace(keySpaceName);
         return keyspace != null;
     }
 
     private boolean tableExists(Metadata metadata) {
-        final KeyspaceMetadata keyspace = metadata.getKeyspace(KEY_SPACE_NAME);
+        final KeyspaceMetadata keyspace = metadata.getKeyspace(keySpaceName);
         final String TABLE_NAME = "sessions";
         final TableMetadata table = keyspace.getTable(TABLE_NAME);
         return table != null;
@@ -89,8 +95,8 @@ public class CassandraPersistence implements SessionPersistence {
     }
 
     @Override
-    public Result<SessionData, SessionError> addSession(SessionData sessionData) {
-        final Result<SessionData, SessionError> result = new Result<>(false, sessionData);
+    public Result<SessionData, ResultError> saveSession(SessionData sessionData) {
+        final Result<SessionData, ResultError> result = new Result<>(false, sessionData);
         try {
             final String query = getInsertCQL();
             final UUID id = UUIDs.random();
@@ -101,15 +107,15 @@ public class CassandraPersistence implements SessionPersistence {
                     sessionData.getPartyId(),
                     sessionData.getApplicationId(),
                     sessionData.getCreated(),
-                    sessionData.getLastRequest(),
-                    sessionData.getEnded(),
+                    sessionData.getLastActive(),
+                    sessionData.getExpired(),
                     toJson(sessionData.getData())
             );
             sessionData.setId(id.toString());
             result.setSuccess(true);
         } catch (IOException e) {
             log.error("Exception Caught: ", e.getMessage());
-            final SessionError error = new SessionError(e.getMessage(), e);
+            final ResultError error = new ResultError(e.getMessage(), e);
             result.setError(error);
         }
         return result;
@@ -122,18 +128,14 @@ public class CassandraPersistence implements SessionPersistence {
                 "(?, ?, ?, ?, ?, ?, ?)";
     }
 
-    private String toJson(Map<String, Object> data) throws IOException {
-        return mapper.writeValueAsString(data);
-    }
-
     public void close() {
         session.getCluster().shutdown();
     }
 
     @Override
-    public Result<SessionData, SessionError> findSession(String id) {
+    public Result<SessionData, ResultError> findSession(String id) {
         final SessionData sessionData = new SessionData(id);
-        final Result<SessionData, SessionError> result = new Result<>(false, sessionData);
+        final Result<SessionData, ResultError> result = new Result<>(false, sessionData);
         try {
             final String query = "SELECT * FROM sessiondb.sessions WHERE id = ?";
             final Row row = session.execute(query, UUID.fromString(id)).one();
@@ -142,31 +144,60 @@ public class CassandraPersistence implements SessionPersistence {
                 sessionData.setPartyId(row.getString("party_id"));
                 sessionData.setApplicationId(row.getString("application_id"));
                 sessionData.setCreated(toTimeInMillis(row.getDate("created")));
-                sessionData.setLastRequest(toTimeInMillis(row.getDate("last_request")));
-                sessionData.setEnded(toTimeInMillis(row.getDate("ended")));
+                sessionData.setLastActive(toTimeInMillis(row.getDate("last_request")));
+                sessionData.setExpired(toTimeInMillis(row.getDate("ended")));
                 sessionData.setData(toMap(row.getString("data")));
             }
             result.setSuccess(true);
             result.setData(sessionData);
         } catch (IOException e) {
             log.error("Exception Caught: ", e.getMessage());
-            final SessionError error = new SessionError(e.getMessage(), e);
+            final ResultError error = new ResultError(e.getMessage(), e);
             result.setError(error);
         }
         return result;
     }
 
-    public Result<SessionData, SessionError> updateSession(SessionData sessionData) {
+    public Result<SessionData, ResultError> updateSession(SessionData sessionData) {
         //TODO: should we version the row and used the version as part of the where clause when updating
         //TODO: if we do what would be the proper way to handle updates where the expected version is incorrect
-        final Result<SessionData, SessionError> result = new Result<>(false, sessionData);
-        final String updateQuery = "UPDATE sessiondb.sessions SET last_request = ?, data = ? WHERE id = ?";
-        session.execute(
-            updateQuery,
-            sessionData.getLastRequest(),
-            sessionData.getData(),
-            sessionData.getId()
-        );
+        final Result<SessionData, ResultError> result = new Result<>(false, sessionData);
+        try {
+            final String updateQuery = "UPDATE sessiondb.sessions SET last_request = ?, data = ? WHERE id = ?";
+            UUID id = UUID.fromString(sessionData.getId());
+            session.execute(
+                updateQuery,
+                sessionData.getLastActive(),
+                toJson(sessionData.getData()),
+                id
+            );
+            result.setSuccess(true);
+        } catch (IOException e) {
+            log.error("Exception Caught: ", e.getMessage());
+            final ResultError error = new ResultError(e.getMessage(), e);
+            result.setError(error);
+        }
+        return result;
+    }
+
+    @Override
+    public Result<SessionData, ResultError> endSession(SessionData sessionData) {
+        final Result<SessionData, ResultError> result = new Result<>(false, sessionData);
+        try {
+            final String updateQuery = "UPDATE sessiondb.sessions SET last_request = ?, ended = ? WHERE id = ?";
+            UUID id = UUID.fromString(sessionData.getId());
+            session.execute(
+                    updateQuery,
+                    sessionData.getLastActive(),
+                    sessionData.getExpired(),
+                    id
+            );
+            result.setSuccess(true);
+        } catch (Exception e) {
+            log.error("Exception Caught: ", e.getMessage());
+            final ResultError error = new ResultError(e.getMessage(), e);
+            result.setError(error);
+        }
         return result;
     }
 
@@ -179,6 +210,10 @@ public class CassandraPersistence implements SessionPersistence {
         }
 
         return aLong;
+    }
+
+    private String toJson(Map<String, Object> data) throws IOException {
+        return mapper.writeValueAsString(data);
     }
 
     private Map<String, Object> toMap(String data) throws IOException {

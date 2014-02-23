@@ -1,5 +1,7 @@
 package com.xlenc.session;
 
+import com.xlenc.api.session.Result;
+import com.xlenc.api.session.ResultError;
 import com.xlenc.api.session.SessionData;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -22,26 +24,25 @@ public class SessionResourceIT {
 
     @BeforeClass
     public void setUp() {
-        final CassandraPersistence cassandraPersistence = new CassandraPersistence("localhost");
+        final CassandraPersistence cassandraPersistence = new CassandraPersistence("localhost", "sessiondb", "sessions");
         final SessionService sessionService = new SessionServiceImpl(cassandraPersistence);
         this.sessionResource = new SessionResource(sessionService);
         this.sessionData = createSessionData();
     }
 
     private static SessionData createSessionData() {
-        final SessionData sessionData = new SessionData(id, data);
+        final SessionData sessionData = new SessionData();
         sessionData.setApplicationId("stack-up");
         sessionData.setPartyId("me");
         sessionData.setCreated(System.currentTimeMillis());
-        sessionData.setLastRequest(System.currentTimeMillis());
-        sessionData.setVersion((long) 1);
+        sessionData.setLastActive(System.currentTimeMillis());
         sessionData.setData(new HashMap<String, Object>() {{
             put("mysession", "thx");
         }});
         return sessionData;
     }
 
-    @Test
+    @Test(enabled = false)
     public void testAddSession() {
         final Response response = sessionResource.addSession(sessionData);
 
@@ -50,7 +51,7 @@ public class SessionResourceIT {
         assertNotNull(entity);
 
         @SuppressWarnings("unchecked")
-        final Result<SessionData, SessionError> sessionDataResult = (Result<SessionData, SessionError>) entity;
+        final Result<SessionData, ResultError> sessionDataResult = (Result<SessionData, ResultError>) entity;
 
         assertTrue(sessionDataResult.isSuccess());
 
@@ -60,7 +61,7 @@ public class SessionResourceIT {
 
     }
 
-    @Test(dependsOnMethods = {"testAddSession"})
+    @Test(dependsOnMethods = {"testAddSession"}, enabled = false)
     public void testReadSession() {
         final Response response = sessionResource.readSession(sessionData.getId());
         final Object entity = response.getEntity();
@@ -68,25 +69,34 @@ public class SessionResourceIT {
         assertNotNull(entity);
 
         @SuppressWarnings("unchecked")
-        final Result<SessionData, SessionError> sessionDataResult = (Result<SessionData, SessionError>) entity;
+        final Result<SessionData, ResultError> sessionDataResult = (Result<SessionData, ResultError>) entity;
 
         assertTrue(sessionDataResult.isSuccess());
 
-        this.sessionData = sessionDataResult.getData();
+        final SessionData data = sessionDataResult.getData();
+
+        assertNotNull(data.getPartyId());
+        assertNotNull(data.getApplicationId());
+        assertNotNull(data.getCreated());
+        assertNotNull(data.getId());
+        assertNotNull(data.getLastActive());
+        assertNotNull(data.getData());
+
+        this.sessionData = data;
 
         assertNotNull(this.sessionData.getId());
     }
 
-    @Test(dependsOnMethods = {"testReadSession"})
+    @Test(dependsOnMethods = {"testReadSession"}, enabled = false)
     public void testUpdateSession() {
         sessionData.getData().put("more", "session data bro.");
-        final Response response = sessionResource.updateSession(sessionData);
+        final Response response = sessionResource.updateSession(sessionData.getId(), sessionData.getData());
         final Object entity = response.getEntity();
 
         assertNotNull(entity);
 
         @SuppressWarnings("unchecked")
-        final Result<SessionData, SessionError> sessionDataResult = (Result<SessionData, SessionError>) entity;
+        final Result<SessionData, ResultError> sessionDataResult = (Result<SessionData, ResultError>) entity;
 
         assertTrue(sessionDataResult.isSuccess());
 
@@ -95,6 +105,22 @@ public class SessionResourceIT {
         assertNotNull(this.sessionData.getId());
     }
 
+    @Test(dependsOnMethods = {"testUpdateSession"}, enabled = false)
+    public void testEndSession() {
+        final Response response = sessionResource.expireSession(sessionData.getId());
 
+        final Object entity = response.getEntity();
+
+        assertNotNull(entity);
+
+        @SuppressWarnings("unchecked")
+        final Result<SessionData, ResultError> sessionDataResult = (Result<SessionData, ResultError>) entity;
+
+        assertTrue(sessionDataResult.isSuccess());
+
+        this.sessionData = sessionDataResult.getData();
+
+        assertNotNull(this.sessionData.getId());
+    }
 
 }

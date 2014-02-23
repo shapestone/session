@@ -25,16 +25,21 @@ public @Data class SessionData {
     private String applicationId;
     @Property("created")
     private Long created;
-    @Property("last_request")
-    private Long lastRequest;
-    @Property("ended")
-    private Long ended;
+    @Property("last_active")
+    private Long lastActive;
+    @Property("expired")
+    private Long expired;
+    @Property("token")
+    private String token;
     @Property("data")
     private Map<String, Object> data;
-    @Version
-    private Long version;
+
+    public SessionData() {
+    }
 
     public SessionData(String id, Map<String, Object> data) {
+        this.id = id;
+        this.data = data;
     }
 
     public SessionData(String id) {
