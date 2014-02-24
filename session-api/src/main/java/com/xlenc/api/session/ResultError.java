@@ -1,4 +1,4 @@
-package com.xlenc.session;
+package com.xlenc.api.session;
 
 import lombok.Data;
 
@@ -8,40 +8,40 @@ import lombok.Data;
  * Time: 12:01 AM
  */
 public @Data
-class SessionError {
+class ResultError {
 
     private int code;
     private String message;
     private Throwable throwable;
 
-    public SessionError(int code) {
+    public ResultError(int code) {
         this.code = code;
     }
 
-    public SessionError(String message) {
+    public ResultError(String message) {
         this.message = message;
     }
 
-    public SessionError(Throwable throwable) {
+    public ResultError(Throwable throwable) {
         this.throwable = throwable;
     }
 
-    public SessionError(int code, String message) {
+    public ResultError(int code, String message) {
         this.code = code;
         this.message = message;
     }
 
-    public SessionError(String message, Throwable throwable) {
+    public ResultError(String message, Throwable throwable) {
         this.message = message;
         this.throwable = throwable;
     }
 
-    public SessionError(int code, Throwable throwable) {
+    public ResultError(int code, Throwable throwable) {
         this.code = code;
         this.throwable = throwable;
     }
 
-    public SessionError(int code, String message, Throwable throwable) {
+    public ResultError(int code, String message, Throwable throwable) {
         this.code = code;
         this.message = message;
         this.throwable = throwable;

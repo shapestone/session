@@ -1,11 +1,12 @@
 package com.xlenc.session;
 
+import com.xlenc.api.session.Result;
+import com.xlenc.api.session.ResultError;
 import com.xlenc.api.session.SessionData;
 import com.yammer.metrics.annotation.Timed;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Response;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -23,41 +24,50 @@ public class SessionResource {
     }
 
     @POST
+    @Consumes("application/json")
+    @Produces("application/json")
     @Timed
     //@ApiOperation(value = "Creates a question", response = QuestionData.class)
     public Response addSession(SessionData sessionData) {
-        final Result<SessionData, SessionError> newSessionData = sessionService.addSession(sessionData);
+        final Result<SessionData, ResultError> newSessionData = sessionService.createSession(sessionData);
         return Response.ok(newSessionData).build();
     }
 
+    public Response validateSession(SessionData sessionData) {
+        final Result<SessionData, ResultError> validSession = sessionService.validateSession(sessionData);
+        return Response.ok(validSession).build();
+    }
+
     @GET
+    @Consumes("application/json")
+    @Produces("application/json")
     @Timed
     //@ApiOperation("Retrieves a list of questions")
     public Response readSession(@PathParam("id") String id) {
-        final Result<SessionData, SessionError> questionData = sessionService.readSession(id);
+        final Result<SessionData, ResultError> questionData = sessionService.readSession(id);
         return Response.ok(questionData).build();
     }
 
-    @DELETE
-    @Timed
-    @Path("/{id}")
-    //@ApiOperation("Delete a question")
-    public Response deleteSession(@PathParam("id") String id) {
-        final int affected = sessionService.deleteSession(id);
-        return Response.ok(
-                new HashMap<String, Object>() {{
-                    put("success", true);
-                    put("affected", affected);
-                }}
-        ).build();
-    }
-
     @PUT
+    @Consumes("application/json")
+    @Produces("application/json")
     @Timed
     @Path("/{id}")
     //@ApiOperation("Delete a question")
     public Response updateSession(@PathParam("id") String id, Map<String, Object> data) {
-        final Result<SessionData, SessionError> result = sessionService.updateSession(new SessionData(id, data));
+        final Result<SessionData, ResultError> result = sessionService.updateSession(new SessionData(id, data));
         return Response.ok(result).build();
     }
+
+    @PUT
+    @Consumes("application/json")
+    @Produces("application/json")
+    @Timed
+    @Path("/{id}/expire")
+    //@ApiOperation("Delete a question")
+    public Response expireSession(@PathParam("id") String id) {
+        final Result<SessionData, ResultError> result = sessionService.expireSession(new SessionData(id));
+        return Response.ok(result).build();
+    }
+
 }

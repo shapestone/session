@@ -17,7 +17,12 @@ class SessionConfiguration  extends Configuration {
 
     @Valid
     @NotNull
-    @JsonProperty("mongoDatabase")
-    private MongoDatabaseConfiguration mongoDatabaseConfiguration = new MongoDatabaseConfiguration();
+    @JsonProperty("cassandraDatabase")
+    private CassandraConfiguration cassandraConfiguration = new CassandraConfiguration();
+
+    @Valid
+    @NotNull
+    @JsonProperty("cassandraDatabase")
+    private CryptoConfiguration cryptoConfiguration = new CryptoConfiguration();
 
 }

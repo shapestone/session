@@ -1,8 +1,8 @@
 package com.xlenc.session;
 
+import com.xlenc.api.session.Result;
+import com.xlenc.api.session.ResultError;
 import com.xlenc.api.session.SessionData;
-
-import javax.ws.rs.core.Response;
 
 /**
  * User: Michael Williams
@@ -10,11 +10,15 @@ import javax.ws.rs.core.Response;
  * Time: 7:59 AM
  */
 public interface SessionService {
-    Result<SessionData, SessionError> addSession(SessionData sessionData);
+    Result<SessionData, ResultError> createSession(SessionData sessionData);
 
-    Result<SessionData, SessionError> readSession(String id);
+    Result<SessionData, ResultError> readSession(String id);
 
     int deleteSession(String id);
 
-    Result<SessionData, SessionError> updateSession(SessionData sessionData);
+    Result<SessionData, ResultError> updateSession(SessionData sessionData);
+
+    Result<SessionData,ResultError> expireSession(SessionData sessionData);
+
+    Result<SessionData,ResultError> validateSession(SessionData sessionData);
 }
