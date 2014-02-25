@@ -25,7 +25,10 @@ public class SessionResourceIT {
     @BeforeClass
     public void setUp() {
         final CassandraPersistence cassandraPersistence = new CassandraPersistence("localhost", "sessiondb", "sessions");
-        final SessionService sessionService = new SessionServiceImpl(cassandraPersistence);
+        final String publicKey = "/Users/mwilliams/IdeaProjects/session/session-service/src/test/resources/public_key.der";
+        final String privateKey = "/Users/mwilliams/IdeaProjects/session/session-service/src/test/resources/private_key.der";
+        final SessionCryptoService sessionCryptoService = new SessionCryptoService(publicKey, privateKey);
+        final SessionService sessionService = new SessionServiceImpl(cassandraPersistence, sessionCryptoService);
         this.sessionResource = new SessionResource(sessionService);
         this.sessionData = createSessionData();
     }
@@ -34,8 +37,8 @@ public class SessionResourceIT {
         final SessionData sessionData = new SessionData();
         sessionData.setApplicationId("stack-up");
         sessionData.setPartyId("me");
-        sessionData.setCreated(System.currentTimeMillis());
-        sessionData.setLastActive(System.currentTimeMillis());
+        sessionData.setCreatedOn(System.currentTimeMillis());
+        sessionData.setLastActiveOn(System.currentTimeMillis());
         sessionData.setData(new HashMap<String, Object>() {{
             put("mysession", "thx");
         }});
@@ -77,9 +80,9 @@ public class SessionResourceIT {
 
         assertNotNull(data.getPartyId());
         assertNotNull(data.getApplicationId());
-        assertNotNull(data.getCreated());
+        assertNotNull(data.getCreatedOn());
         assertNotNull(data.getId());
-        assertNotNull(data.getLastActive());
+        assertNotNull(data.getLastActiveOn());
         assertNotNull(data.getData());
 
         this.sessionData = data;

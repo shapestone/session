@@ -1,6 +1,11 @@
 package com.xlenc.session;
 
-import com.datastax.driver.core.*;
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.Metadata;
+import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Session;
+import com.datastax.driver.core.TableMetadata;
 import com.datastax.driver.core.utils.UUIDs;
 import com.xlenc.api.session.Result;
 import com.xlenc.api.session.ResultError;
@@ -106,9 +111,9 @@ public class CassandraPersistence implements SessionPersistence {
                     id,
                     sessionData.getPartyId(),
                     sessionData.getApplicationId(),
-                    sessionData.getCreated(),
-                    sessionData.getLastActive(),
-                    sessionData.getExpired(),
+                    sessionData.getCreatedOn(),
+                    sessionData.getLastActiveOn(),
+                    sessionData.getExpiredOn(),
                     toJson(sessionData.getData())
             );
             sessionData.setId(id.toString());
@@ -143,9 +148,9 @@ public class CassandraPersistence implements SessionPersistence {
                 sessionData.setId(row.getUUID("id").toString());
                 sessionData.setPartyId(row.getString("party_id"));
                 sessionData.setApplicationId(row.getString("application_id"));
-                sessionData.setCreated(toTimeInMillis(row.getDate("created")));
-                sessionData.setLastActive(toTimeInMillis(row.getDate("last_request")));
-                sessionData.setExpired(toTimeInMillis(row.getDate("ended")));
+                sessionData.setCreatedOn(toTimeInMillis(row.getDate("created")));
+                sessionData.setLastActiveOn(toTimeInMillis(row.getDate("last_request")));
+                sessionData.setExpiredOn(toTimeInMillis(row.getDate("ended")));
                 sessionData.setData(toMap(row.getString("data")));
             }
             result.setSuccess(true);
@@ -167,7 +172,7 @@ public class CassandraPersistence implements SessionPersistence {
             UUID id = UUID.fromString(sessionData.getId());
             session.execute(
                 updateQuery,
-                sessionData.getLastActive(),
+                sessionData.getLastActiveOn(),
                 toJson(sessionData.getData()),
                 id
             );
@@ -188,8 +193,8 @@ public class CassandraPersistence implements SessionPersistence {
             UUID id = UUID.fromString(sessionData.getId());
             session.execute(
                     updateQuery,
-                    sessionData.getLastActive(),
-                    sessionData.getExpired(),
+                    sessionData.getLastActiveOn(),
+                    sessionData.getExpiredOn(),
                     id
             );
             result.setSuccess(true);

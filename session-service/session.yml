@@ -1,11 +1,11 @@
-cassandraDatabase:
+cassandra:
   host: localhost
   keySpaceName: sessiondb
   tableName: sessions
 
 crypto:
-  publicKeyFileName: /Users/michael/IdeaProjects/session/session-service/src/main/resources/sessionkey.pub
-  privateKeyFileName: /Users/michael/IdeaProjects/session/session-service/src/main/resources/sessionkey.pem
+  publicKeyFileName: /Users/mwilliams/IdeaProjects/session/session-service/src/test/resources/public_key.der
+  privateKeyFileName: /Users/mwilliams/IdeaProjects/session/session-service/src/test/resources/private_key.der
 
 http:
   port: 9020

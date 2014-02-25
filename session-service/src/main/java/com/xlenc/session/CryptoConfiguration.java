@@ -1,7 +1,7 @@
 package com.xlenc.session;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
+import org.codehaus.jackson.annotate.*;
 import org.hibernate.validator.constraints.NotEmpty;
 
 /**

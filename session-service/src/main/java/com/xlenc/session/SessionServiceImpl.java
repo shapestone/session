@@ -20,11 +20,22 @@ public class SessionServiceImpl implements SessionService {
     }
 
     public Result<SessionData, ResultError> createSession(SessionData sessionData) {
-        sessionData.setCreated(System.currentTimeMillis());
-        sessionData.setLastActive(System.currentTimeMillis());
+        Result<SessionData, ResultError> createSessionResult = new Result<>(false);
+        sessionData.setCreatedOn(System.currentTimeMillis());
+        sessionData.setLastActiveOn(System.currentTimeMillis());
         final Result<SessionData, ResultError> saveResult = sessionPersistence.saveSession(sessionData);
-        final Result<SessionData, ResultError> tokenResult = sessionCryptoService.createToken(sessionData);
-        return result;
+        if (saveResult.isSuccess()) {
+            final Result<SessionData, ResultError> tokenResult = sessionCryptoService.createToken(sessionData);
+            if (tokenResult.isSuccess()) {
+                createSessionResult.setSuccess(true);
+                createSessionResult.setData(tokenResult.getData());
+            } else {
+                createSessionResult = tokenResult;
+            }
+        } else {
+            createSessionResult = saveResult;
+        }
+        return createSessionResult;
     }
 
     public Result<SessionData, ResultError> readSession(String id) {
@@ -37,14 +48,14 @@ public class SessionServiceImpl implements SessionService {
 
     @Override
     public Result<SessionData, ResultError> updateSession(SessionData sessionData) {
-        sessionData.setLastActive(System.currentTimeMillis());
+        sessionData.setLastActiveOn(System.currentTimeMillis());
         return sessionPersistence.updateSession(sessionData);
     }
 
     @Override
     public Result<SessionData, ResultError> expireSession(SessionData sessionData) {
-        sessionData.setLastActive(System.currentTimeMillis());
-        sessionData.setExpired(System.currentTimeMillis());
+        sessionData.setLastActiveOn(System.currentTimeMillis());
+        sessionData.setExpiredOn(System.currentTimeMillis());
         return sessionPersistence.endSession(sessionData);
     }
 

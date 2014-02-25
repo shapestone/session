@@ -22,14 +22,8 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.12.2</version>
+            <version>1.12.4</version>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>com.google.code.morphia</groupId>
-            <artifactId>morphia</artifactId>
-            <version>0.99</version>
-        </dependency>
     </dependencies>
-
 </project>

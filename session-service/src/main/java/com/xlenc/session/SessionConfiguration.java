@@ -17,12 +17,12 @@ class SessionConfiguration  extends Configuration {
 
     @Valid
     @NotNull
-    @JsonProperty("cassandraDatabase")
+    @JsonProperty("cassandra")
     private CassandraConfiguration cassandraConfiguration = new CassandraConfiguration();
 
     @Valid
     @NotNull
-    @JsonProperty("cassandraDatabase")
+    @JsonProperty("crypto")
     private CryptoConfiguration cryptoConfiguration = new CryptoConfiguration();
 
 }

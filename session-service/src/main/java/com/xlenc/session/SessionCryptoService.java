@@ -1,21 +1,28 @@
 package com.xlenc.session;
 
-import com.datastax.driver.core.Session;
 import com.xlenc.api.session.Result;
 import com.xlenc.api.session.ResultError;
 import com.xlenc.api.session.SessionData;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import org.codehaus.jackson.Version;
+import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.module.SimpleModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.crypto.Cipher;
-import java.io.*;
 import java.math.BigInteger;
-import java.security.KeyFactory;
-import java.security.PublicKey;
-import java.security.spec.RSAPublicKeySpec;
 
 import static javax.xml.bind.DatatypeConverter.printBase64Binary;
 
@@ -37,14 +44,19 @@ public class SessionCryptoService {
 
     public Result<SessionData, ResultError> createToken(SessionData sessionData) {
         final Result<SessionData, ResultError> createToken = new Result<>(false);
-        final Result<PublicKey, ResultError> readFileResult = readPublicKeyFromFile(publicKeyFileName);
+        final Result<PublicKey, ResultError> readFileResult = PublicKeyReader.get(publicKeyFileName);
         if (readFileResult.isSuccess()) {
-            final String data = buildData(sessionData);
-            final Result<byte[], ResultError> encryptDataResult = encryptData(data);
-            final String base64Token = printBase64Binary(encryptDataResult.getData());
-            sessionData.setToken(base64Token);
-            createToken.setData(sessionData);
-            createToken.setSuccess(true);
+            final Result<String, ResultError> buildDataResult = buildData(sessionData);
+            if (buildDataResult.isSuccess()) {
+                final String data = buildDataResult.getData();
+                final Result<byte[], ResultError> encryptDataResult = encryptData(data);
+                final String base64Token = printBase64Binary(encryptDataResult.getData());
+                sessionData.setToken(base64Token);
+                createToken.setData(sessionData);
+                createToken.setSuccess(true);
+            } else {
+
+            }
         } else {
             createToken.setError(readFileResult.getError());
         }
@@ -60,14 +72,14 @@ public class SessionCryptoService {
         final Result<byte[], ResultError> encryptDataResult = new Result<>(false);
         log.debug("Data Before Encryption : {}", data);
         final byte[] dataToEncrypt = data.getBytes();
-        byte[] encryptedData = null;
+
         try {
-            final Result<PublicKey, ResultError> readPublicKeyResult = readPublicKeyFromFile(publicKeyFileName);
+            final Result<PublicKey, ResultError> readPublicKeyResult = PublicKeyReader.get(publicKeyFileName);
             if (readPublicKeyResult.isSuccess()) {
                 final PublicKey pubKey = readPublicKeyResult.getData();
                 final Cipher cipher = Cipher.getInstance("RSA");
                 cipher.init(Cipher.ENCRYPT_MODE, pubKey);
-                encryptedData = cipher.doFinal(dataToEncrypt);
+                final byte[] encryptedData = cipher.doFinal(dataToEncrypt);
                 log.debug("Encryted Data: {}", encryptedData);
                 encryptDataResult.setSuccess(true);
                 encryptDataResult.setData(encryptedData);
@@ -80,60 +92,105 @@ public class SessionCryptoService {
         return encryptDataResult;
     }
 
+    /**
+     * Encrypt Data
+     * @param data
+     * @throws IOException
+     */
+    private void decryptData(byte[] data) throws IOException {
+        System.out.println("\n----------------DECRYPTION STARTED------------");
+        byte[] descryptedData = null;
+
+        try {
+            final Result<PrivateKey, ResultError> privateKeyResultErrorResult = PrivateKeyReader.get(privateKeyFileName);
+            PrivateKey privateKey = privateKeyResultErrorResult.getData();
+            Cipher cipher = Cipher.getInstance("RSA");
+            cipher.init(Cipher.DECRYPT_MODE, privateKey);
+            descryptedData = cipher.doFinal(data);
+            System.out.println("Decrypted Data: " + new String(descryptedData));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        System.out.println("----------------DECRYPTION COMPLETED------------");
+    }
+
     private Result<String, ResultError> buildData(SessionData sessionData) {
         final Result<String, ResultError> buildDataResult = new Result<>(false);
         try {
             final ObjectMapper mapper = new ObjectMapper();
+            mapper.registerModule(new SessionDataModule());
             final String json = mapper.writeValueAsString(sessionData);
-            mapper.registerModule();
+            buildDataResult.setSuccess(true);
+            buildDataResult.setData(json);
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Exception Caught", e);
+            buildDataResult.setError(new ResultError(e.getMessage(), e));
         }
         return buildDataResult;
     }
 
-    private Result<PublicKey, ResultError> readPublicKeyFromFile(String fileName) {
-        final Result<PublicKey, ResultError> result = new Result<>(false);
-        FileInputStream fis = null;
-        ObjectInputStream ois = null;
-        try {
-            fis = new FileInputStream(new File(fileName));
-            ois = new ObjectInputStream(fis);
+    public static class PublicKeyReader {
+        public static Result<PublicKey, ResultError> get(String filename) {
+            final Result<PublicKey, ResultError> publicKeyResult = new Result<>(false);
 
-            final BigInteger modulus = (BigInteger) ois.readObject();
-            final BigInteger exponent = (BigInteger) ois.readObject();
+            final PublicKey publicKey;
+            final File f = new File(filename);
+            try (final FileInputStream fis = new FileInputStream(f);
+                 final DataInputStream dis = new DataInputStream(fis)) {
 
-            //Get Public Key
-            final RSAPublicKeySpec rsaPublicKeySpec = new RSAPublicKeySpec(modulus, exponent);
-            KeyFactory fact = KeyFactory.getInstance("RSA");
-            PublicKey publicKey = fact.generatePublic(rsaPublicKeySpec);
+                final byte[] keyBytes = new byte[(int)f.length()];
+                dis.readFully(keyBytes);
+                dis.close();
 
-            result.setSuccess(true);
-            result.setData(publicKey);
+                final X509EncodedKeySpec spec = new X509EncodedKeySpec(keyBytes);
+                final KeyFactory kf = KeyFactory.getInstance("RSA");
+                publicKey = kf.generatePublic(spec);
 
-        } catch (Exception e) {
+                publicKeyResult.setData(publicKey);
+                publicKeyResult.setSuccess(true);
 
-            log.error("Exception Caught", e);
-            result.setError(new ResultError(e.getMessage(), e));;
-
-        } finally{
-            if(ois != null){
-                try {
-                    ois.close();
-                    fis.close();
-                } catch (IOException e) {
-                    log.error("Exception Caught", e);
-                }
+            } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
+                log.error("Exception Caught", e);
+                publicKeyResult.setError(new ResultError(e.getMessage(), e));
             }
+            return publicKeyResult;
         }
-
-        return result;
-
     }
 
-    public class MyModule extends SimpleModule {
-        public MyModule() {
-            super("ModuleName", new Version(0,0,1,null));
+    public static class PrivateKeyReader {
+        public static Result<PrivateKey, ResultError> get(String filename) {
+            final Result<PrivateKey, ResultError> publicKeyResult = new Result<>(false);
+
+            final PrivateKey privateKey;
+            final File f = new File(filename);
+
+            try (final FileInputStream fis = new FileInputStream(f);
+                 final DataInputStream dis = new DataInputStream(fis)) {
+
+                final byte[] keyBytes = new byte[(int)f.length()];
+                dis.readFully(keyBytes);
+                dis.close();
+
+                final PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
+                final KeyFactory kf = KeyFactory.getInstance("RSA");
+                privateKey = kf.generatePrivate(spec);
+
+                publicKeyResult.setSuccess(true);
+                publicKeyResult.setData(privateKey);
+
+            } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
+                log.error("Exception Caught", e);
+                publicKeyResult.setError(new ResultError(e.getMessage(), e));
+            }
+            return publicKeyResult;
+        }
+    }
+
+    public class SessionDataModule extends SimpleModule {
+        public SessionDataModule() {
+            super("SessionDataModule", new Version(0,0,1,null));
         }
 
         @Override
@@ -141,16 +198,22 @@ public class SessionCryptoService {
             context.setMixInAnnotations(SessionData.class, SessionDataMixIn.class);
             // and other set up, if any
         }
-
     }
 
     public interface SessionDataMixIn {
+        @JsonProperty("id")
         String getId();
+        @JsonProperty("party_id")
         String getPartyId();
+        @JsonProperty("application_id")
         String getApplicationId();
-        Long getCreated();
-        Long getLastActive();
+        @JsonProperty("created_on")
+        Long getCreatedOn();
+        @JsonProperty("last_active_on")
+        Long getLastActiveOn();
+        @JsonProperty("expired_on")
         Long getExpired();
+        @JsonProperty("token")
         String getToken();
     }
 
