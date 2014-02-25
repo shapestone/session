@@ -1,8 +1,10 @@
 package com.xlenc.session;
 
-import com.xlenc.api.session.SessionData;
+import com.xlenc.api.session.*;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
+
+import static org.testng.Assert.*;
 
 /**
  * User: Michael Williams
@@ -15,12 +17,16 @@ public class SessionCryptoServiceTest {
 
     @BeforeClass
     public void setUp() {
-        this.sessionCryptoService = new SessionCryptoService();
+        final String publicKey = "/Users/mwilliams/IdeaProjects/session/session-service/src/test/resources/public_key.der";
+        final String privateKey = "/Users/mwilliams/IdeaProjects/session/session-service/src/test/resources/private_key.der";
+        this.sessionCryptoService = new SessionCryptoService(publicKey, privateKey);
     }
 
     @Test
     public void testEncryptSession() {
         final SessionData sessionData = new SessionData();
-        this.sessionCryptoService.createToken(sessionData);
+        final Result<SessionData,ResultError> token = this.sessionCryptoService.createToken(sessionData);
+        assertTrue(token.isSuccess());
     }
+
 }
